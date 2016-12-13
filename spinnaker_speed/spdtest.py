@@ -24,12 +24,32 @@ class Speed(pytry.NengoTrial):
             output = nengo.Node(output_func, size_in=p.D_out)
 
             nengo.Connection(stim, ens)
-            nengo.Connection(ens, output, function=lambda x: [0]*p.D_out)
+            c = nengo.Connection(ens, output, function=lambda x: [0]*p.D_out,
+                                 learning_rule_type=nengo.PES())
+
+
+            def error_func(t):
+                return [np.sin(t)] * p.D_out
+            error = nengo.Node(error_func)
+            nengo.Connection(error, c.learning_rule)
+
+            self.error = error
+            self.stim = stim
+            self.output = output
+
         return model
 
     def evaluate(self, p, sim, plt):
         sim.run(p.T)
 
-        freq = len(self.times) / float(p.T)
+        exec_freq = len(self.times) / float(p.T)
 
-        return dict(freq=freq, first_time=self.times[0])
+        error_send_freq = len(self.error._to_spinn_times) / float(p.T)
+        stim_send_freq = len(self.stim._to_spinn_times) / float(p.T)
+        output_read_freq = len(self.output._from_spinn_times) / float(p.T)
+
+        return dict(exec_freq=exec_freq,
+                    error_send_freq=error_send_freq,
+                    stim_send_freq=stim_send_freq,
+                    output_read_freq=output_read_freq,
+                    )
