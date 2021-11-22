@@ -1,25 +1,23 @@
 import nengo
 import nengo_spa as spa
-import numpy as np
 
-use_hex = False
+use_hex = True
 if use_hex:
     import grid_cells
-    basis = grid_cells.GridBasis(dimensions=2, n_rotates=8, scales=np.linspace(0.5, 2, 3))
+    basis = grid_cells.GridBasis(dimensions=2)
     D = basis.axes.shape[1]
     vocab = spa.Vocabulary(D)
     vocab.add('X', basis.axes[0])
     vocab.add('Y', basis.axes[1])
 else:
-    D = 145
+    D = 64
     vocab = spa.Vocabulary(D)
     vocab.add('X', vocab.algebra.create_vector(D, {"positive", "unitary"}))
     vocab.add('Y', vocab.algebra.create_vector(D, {"positive", "unitary"}))
-print(D)
+
+
 X = vocab.parse('X')
 Y = vocab.parse('Y')
-lnX = spa.SemanticPointer(np.fft.ifft(np.log(np.fft.fft(X.v))).real)
-lnY = spa.SemanticPointer(np.fft.ifft(np.log(np.fft.fft(Y.v))).real)
 
 
 import nengo
@@ -114,46 +112,16 @@ R = 101
 model = spa.Network()
 with model:
     stim_xy = nengo.Node([0,0])
-
-
-    path = spa.networks.CircularConvolution(n_neurons=200, dimensions=D)
-    for ens in path.all_ensembles:
-        ens.radius=3.0    
-    stim = nengo.Node(lambda t: ((X**0)*(Y**0)).v if t<0.1 else np.zeros(D))
-    nengo.Connection(stim, path.input_a, synapse=0.1)
-    
-    with path.product:
-        path.product.output_a = nengo.Node(None, size_in=path.product.sq1.output.size_out)
-        nengo.Connection(path.product.sq1.output, path.product.output_a, transform=0.5, synapse=None)
-        nengo.Connection(path.product.sq2.output, path.product.output_a, transform=0.5, synapse=None)
-    with path:
-        path.output_a = nengo.Node(None, size_in=D)
-        import nengo_spa.networks.circularconvolution
-        transform = nengo_spa.networks.circularconvolution.transform_out(D)
-        nengo.Connection(path.product.output_a, path.output_a, transform=transform, synapse=None)
         
-    
-    r_scale = 1.0
-    nengo.Connection(path.product.sq1.output, path.product.sq1.input, transform=0.5*r_scale, synapse=0.1)
-    nengo.Connection(path.product.sq2.output, path.product.sq1.input, transform=0.5*r_scale, synapse=0.1)
+    stim = nengo.Node(lambda t, x: (X**x[0]*Y**x[1]).v, size_in=2)
 
-    nengo.Connection(path.product.sq1.output, path.product.sq2.input, transform=0.5*r_scale, synapse=0.1)
-    nengo.Connection(path.product.sq2.output, path.product.sq2.input, transform=0.5*r_scale, synapse=0.1)
-    
-    
-    v_scale = 5
-    nengo.Connection(stim_xy[0], path.input_b, transform=lnX.v.reshape((D, 1)))
-    nengo.Connection(stim_xy[1], path.input_b, transform=lnY.v.reshape((D, 1)))
-    nengo.Connection(path.output, path.input_a, transform=v_scale*0.1, synapse=0.1)
-
-
-
-        
-
+    state = spa.State(D, subdimensions=1)
 
     plt = PlotSSP(X, Y, x_vals=np.linspace(-5, 5, R),
                         y_vals=np.linspace(-5, 5, R))
-    nengo.Connection(path.output_a, plt)
+    nengo.Connection(stim, state.input)
+    nengo.Connection(state.output, plt)
+    nengo.Connection(stim_xy, stim)    
 
 def on_step(sim):
     plt.move_plot(__page__.keys_pressed)

@@ -1,14 +1,22 @@
 import nengo
 import nengo_spa as spa
 
-D = 128
+use_hex = True
+if use_hex:
+    import grid_cells
+    basis = grid_cells.GridBasis(dimensions=2)
+    D = basis.axes.shape[1]
+    vocab = spa.Vocabulary(D)
+    vocab.add('X', basis.axes[0])
+    vocab.add('Y', basis.axes[1])
+else:
+    D = 128
+    vocab = spa.Vocabulary(D)
+    vocab.add('X', vocab.algebra.create_vector(D, {"positive", "unitary"}))
+    vocab.add('Y', vocab.algebra.create_vector(D, {"positive", "unitary"}))
 
-vocab = spa.Vocabulary(D)
-vocab.add('X', vocab.algebra.create_vector(D, {"positive", "unitary"}))
-vocab.add('Y', vocab.algebra.create_vector(D, {"positive", "unitary"}))
 X = vocab.parse('X')
 Y = vocab.parse('Y')
-
 
 import nengo
 import numpy as np
@@ -110,7 +118,7 @@ with model:
     
         
     #cc = nengo.networks.CircularConvolution(n_neurons=50, dimensions=D)
-    state = spa.State(D, feedback=1)
+    state = spa.State(D, subdimensions=1, feedback=1)
     init_node = nengo.Node(lambda t: (X**0 * Y**0).v if t<0.1 else np.zeros(D))
     nengo.Connection(stim, state.input, synapse=0.1)    
     

@@ -2,11 +2,20 @@ import nengo
 import nengo_spa as spa
 import numpy as np
 
-D = 1024
-
-vocab = spa.Vocabulary(D)
-vocab.add('X', vocab.algebra.create_vector(D, {"positive", "unitary"}))
-vocab.add('T', vocab.algebra.create_vector(D, {"positive", "unitary"}))
+use_hex = False
+if use_hex:
+    import grid_cells
+    basis = grid_cells.GridBasis(dimensions=2, n_rotates=12, scales=np.linspace(0.25, 4, 16))
+    D = basis.axes.shape[1]
+    vocab = spa.Vocabulary(D)
+    vocab.add('X', basis.axes[0])
+    vocab.add('T', basis.axes[1])
+else:
+    D = 1024
+    vocab = spa.Vocabulary(D)
+    vocab.add('X', vocab.algebra.create_vector(D, {"positive", "unitary"}))
+    vocab.add('T', vocab.algebra.create_vector(D, {"positive", "unitary"}))
+print(D)
 X = vocab.parse('X')
 T = vocab.parse('T')
 lnT = spa.SemanticPointer(np.fft.ifft(np.log(np.fft.fft(T.v))).real)
