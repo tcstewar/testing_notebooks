@@ -88,9 +88,10 @@ with model:
 
         
     llp = learn_dyn_sys.LearnDynSys(size_c=D, size_z=2, q=q, theta=0.5, 
-                                    n_neurons=N, learning_rate=1e-5,
-                                    intercepts=nengo.dists.Choice([sparsity_to_x_intercept(D, 0.15)]),
-                                    encoders=[convert.output(0,x) for x in np.random.uniform(-1,1,(N, 4))],
+                                    n_neurons=N, learning_rate=1e-4,
+                                    intercepts=nengo.dists.CosineSimilarity(D+2),
+                                    #intercepts=nengo.dists.Choice([sparsity_to_x_intercept(D, 0.15)]),
+                                    #encoders=[convert.output(0,x) for x in np.random.uniform(-1,1,(N, 4))],
                                     )
     env_node = nengo.Node(env.update, size_in=20)
     
